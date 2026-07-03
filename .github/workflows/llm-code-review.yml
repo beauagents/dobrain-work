@@ -50,5 +50,3 @@ jobs:
               issue_number: context.issue.number,
               body: '## 🤖 Code Review (OpenAI Codex — ' + model + ')\n\n' + review
             });
-' + review
-            });
