@@ -22,7 +22,15 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
   - CLOUDFLARE_API_TOKEN
   - CLOUDFLARE_ACCOUNT_ID
   - OPENAI_OAUTH_TOKEN (your ChatGPT subscription OAuth token)
+  - OPENAI_REFRESH_TOKEN (for automatic token renewal)
 - Push to the main branch to trigger deployment.
+
+## Token management
+The OAuth token refreshes automatically every 6 hours via the `Refresh OAuth Token` workflow. To set this up:
+1. Run `codex login` locally with your ChatGPT account
+2. Copy the refresh token from `~/.codex/auth.json`
+3. Add it as `OPENAI_REFRESH_TOKEN` in GitHub repository secrets
+4. The workflow will automatically update `OPENAI_OAUTH_TOKEN` when it expires
 
 ## LLM bots (OpenAI Codex — ChatGPT subscription)
 All LLM-powered bots use the OpenAI Codex CLI with your ChatGPT business subscription — no API keys or pay-per-use costs.

@@ -1,0 +1,87 @@
+name: Refresh OAuth Token
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
+      - name: Refresh OAuth token
+        env:
+          OPENAI_REFRESH_TOKEN: ${{ secrets.OPENAI_REFRESH_TOKEN }}
+        run: |
+          if [ -z "$OPENAI_REFRESH_TOKEN" ]; then
+            echo "No refresh token configured. Please set OPENAI_REFRESH_TOKEN secret."
+            exit 1
+          fi
+          
+          # Create auth directory
+          mkdir -p ~/.codex
+          
+          # Write refresh token to auth file
+          cat > ~/.codex/auth.json << AUTH_EOF
+          {
+            "refresh_token": "$OPENAI_REFRESH_TOKEN",
+            "token_type": "Bearer"
+          }
+          AUTH_EOF
+          
+          # Attempt to refresh the token
+          codex --refresh-token 2>&1 || true
+          
+          # Check if we got a new token
+          if [ -f ~/.codex/auth.json ]; then
+            NEW_TOKEN=$(cat ~/.codex/auth.json | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const j=JSON.parse(d);console.log(j.access_token||'');}catch(e){console.log('');}})")
+            if [ -n "$NEW_TOKEN" ]; then
+              echo "Token refreshed successfully"
+              echo "NEW_TOKEN=$NEW_TOKEN" >> $GITHUB_ENV
+            else
+              echo "Failed to refresh token"
+              exit 1
+            fi
+          fi
+      - name: Update GitHub secret
+        if: env.NEW_TOKEN != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = process.env.NEW_TOKEN;
+            if (!token) {
+              console.log('No new token to update');
+              return;
+            }
+            
+            // Get the public key for encryption
+            const publicKey = await github.rest.actions.getRepoPublicKey({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            // Encrypt the token
+            const sodium = require('tweetsodium');
+            const messageBytes = Buffer.from(token);
+            const keyBytes = Buffer.from(publicKey.data.key, 'base64');
+            const encryptedBytes = sodium.seal(messageBytes, keyBytes);
+            const encrypted = Buffer.from(encryptedBytes).toString('base64');
+            
+            // Update the secret
+            await github.rest.actions.createOrUpdateRepoSecret({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              secret_name: 'OPENAI_OAUTH_TOKEN',
+              encrypted_value: encrypted,
+              key_id: publicKey.data.key_id
+            });
+            
+            console.log('OAuth token secret updated successfully');
