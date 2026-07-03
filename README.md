@@ -34,11 +34,11 @@ The OAuth token refreshes automatically every 6 hours via the `Refresh OAuth Tok
 
 ## LLM bots (OpenAI Codex — ChatGPT subscription)
 All LLM-powered bots use the OpenAI Codex CLI with your ChatGPT business subscription — no API keys or pay-per-use costs.
-- **Code Review** — reviews PR diffs for bugs, security issues, and code quality
-- **Issue Triage** — classifies and prioritizes new issues automatically
-- **Changelog Writer** — generates changelog entries from commits on push
-- **Health Report** — weekly repo health metrics and improvement suggestions
-- **Docs Sync** — checks if README stays in sync with code changes in PRs
+- **Code Review** — reviews PR diffs for bugs, security issues, and code quality (o4-mini)
+- **Issue Triage** — classifies and prioritizes new issues automatically (o4-mini)
+- **Changelog Writer** — generates changelog entries from commits on push (o4-mini)
+- **Health Report** — weekly repo health metrics and improvement suggestions (o4-mini)
+- **Docs Sync** — checks if README stays in sync with code changes in PRs (o4-mini)
 
 ## CI/CD automation
 - CI workflow runs on pushes and pull requests to validate the worker and maintenance script.

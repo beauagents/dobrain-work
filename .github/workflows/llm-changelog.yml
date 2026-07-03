@@ -26,10 +26,10 @@ jobs:
       - name: Generate changelog
         env:
           OPENAI_OAUTH_TOKEN: ${{ secrets.OPENAI_OAUTH_TOKEN }}
-          CODEX_MODEL: ${{ vars.CODEX_CHANGELOG_MODEL || 'gpt-4o' }}
+          CODEX_MODEL: ${{ vars.CODEX_CHANGELOG_MODEL || 'o4-mini' }}
         run: |
           COMMITS=$(git log --oneline -10 --no-merges)
-          codex --quiet --model "$CODEX_MODEL" "Generate a concise changelog entry from these commits. Group by type (features, fixes, maintenance). Use markdown. Focus ONLY on changelog. Commits: $COMMITS" > /tmp/changelog.md 2>&1 || true
+          echo "Generate a concise changelog entry from these commits. Group by type (features, fixes, maintenance). Use markdown. Focus ONLY on changelog.\n\nCommits:\n$COMMITS" | codex exec -m "$CODEX_MODEL" --sandbox read-only --dangerously-bypass-approvals-and-sandbox -o /tmp/changelog.md -
       - name: Commit changelog
         run: |
           ENTRY=$(cat /tmp/changelog.md)
