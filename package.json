@@ -10,6 +10,6 @@
     "maintenance": "node scripts/maintenance.js"
   },
   "devDependencies": {
-    "wrangler": "^3.78.0"
+    "wrangler": "^4.107.0"
   }
 }
