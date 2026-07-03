@@ -14,6 +14,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
       - name: Gather metrics
         id: metrics
         run: |
@@ -21,18 +26,15 @@ jobs:
           echo "recent_commits=$(git log --oneline --since='7 days ago' | wc -l)" >> $GITHUB_OUTPUT
           echo "files_count=$(git ls-files | wc -l)" >> $GITHUB_OUTPUT
       - name: Generate health report
-        uses: openai/codex-action@v1
-        with:
-          prompt: |
-            You are a repository health analyst. Given repo metrics, produce a concise health report with status indicators (✅ healthy, ⚠️ needs attention, ❌ critical). Suggest actionable improvements. Focus ONLY on health metrics.
-            
-            Repository: dobrain-work (Cloudflare Worker)
-            
-            Metrics:
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_MODEL: ${{ vars.CODEX_HEALTH_MODEL || 'gpt-4o' }}
+          METRICS: |
             Total commits: ${{ steps.metrics.outputs.total_commits }}
             Commits this week: ${{ steps.metrics.outputs.recent_commits }}
             Files in repo: ${{ steps.metrics.outputs.files_count }}
-          output-file: /tmp/health.md
+        run: |
+          codex --quiet --model "$CODEX_MODEL" "You are a repository health analyst. Given repo metrics, produce a concise health report with status indicators (✅ healthy, ⚠️ needs attention, ❌ critical). Suggest actionable improvements. Focus ONLY on health metrics. Repository: dobrain-work (Cloudflare Worker). Metrics: $METRICS" > /tmp/health.md 2>&1 || true
       - name: Create health issue
         uses: actions/github-script@v7
         with:

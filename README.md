@@ -24,7 +24,7 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - Push to the main branch to trigger deployment.
 
 ## LLM bots (OpenAI Codex — ChatGPT subscription)
-All LLM-powered bots use OpenAI Codex with your ChatGPT business subscription — no API keys or pay-per-use costs.
+All LLM-powered bots use the OpenAI Codex CLI with your ChatGPT business subscription — no API keys or pay-per-use costs.
 - **Code Review** — reviews PR diffs for bugs, security issues, and code quality
 - **Issue Triage** — classifies and prioritizes new issues automatically
 - **Changelog Writer** — generates changelog entries from commits on push

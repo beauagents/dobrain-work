@@ -13,18 +13,20 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex
       - name: Triage issue
         id: triage
-        uses: openai/codex-action@v1
-        with:
-          prompt: |
-            Classify this issue into exactly one category and suggest a priority. Respond in JSON only: {"category": "bug|feature|question|docs|maintenance", "priority": "low|medium|high|critical", "summary": "one line summary"}. Focus ONLY on triage.
-            
-            Title: ${{ github.event.issue.title }}
-            
-            Body:
-            ${{ github.event.issue.body }}
-          output-file: /tmp/triage.json
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CODEX_MODEL: ${{ vars.CODEX_TRIAGE_MODEL || 'gpt-4o-mini' }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          codex --quiet --model "$CODEX_MODEL" "Classify this issue into exactly one category and suggest a priority. Respond in JSON only: {category, priority, summary}. Focus ONLY on triage. Title: $ISSUE_TITLE. Body: $ISSUE_BODY" > /tmp/triage.json 2>&1 || true
       - name: Apply labels
         uses: actions/github-script@v7
         with:
@@ -32,8 +34,12 @@ jobs:
             const fs = require('fs');
             let raw = fs.readFileSync('/tmp/triage.json', 'utf8');
             raw = raw.replace(/```json/g, '').replace(/```/g, '').trim();
-            const triage = JSON.parse(raw);
-            const labels = [triage.category];
-            if (triage.priority === 'critical' || triage.priority === 'high') labels.push('priority:' + triage.priority);
-            await github.rest.issues.addLabels({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, labels});
-            await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: '## 🤖 Issue Triage (OpenAI Codex)\n\n- **Category:** ' + triage.category + '\n- **Priority:** ' + triage.priority + '\n- **Summary:** ' + triage.summary});
+            try {
+              const triage = JSON.parse(raw);
+              const labels = [triage.category];
+              if (triage.priority === 'critical' || triage.priority === 'high') labels.push('priority:' + triage.priority);
+              await github.rest.issues.addLabels({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, labels});
+              await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: '## 🤖 Issue Triage (OpenAI Codex)\n\n- **Category:** ' + triage.category + '\n- **Priority:** ' + triage.priority + '\n- **Summary:** ' + triage.summary});
+            } catch(e) {
+              console.log('Triage output:', raw);
+            }
