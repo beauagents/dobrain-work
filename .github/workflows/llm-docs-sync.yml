@@ -21,11 +21,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install Codex CLI
-        run: npm install -g @openai/codex
       - name: Get diff and README
         id: context
         run: |
@@ -38,12 +33,17 @@ jobs:
           echo "$README" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
       - name: Check docs alignment
-        env:
-          OPENAI_OAUTH_TOKEN: ${{ secrets.OPENAI_OAUTH_TOKEN }}
-          DIFF: ${{ steps.context.outputs.diff }}
-          README: ${{ steps.context.outputs.readme }}
-        run: |
-          echo "Compare code changes with the README and identify documentation that needs updating. Respond in JSON: {in_sync: true/false, missing_updates: [list]}. Focus ONLY on docs/code alignment.\n\nCode diff:\n$DIFF\n\nREADME:\n$README" | codex exec --sandbox read-only --dangerously-bypass-approvals-and-sandbox -o /tmp/docs-check.json -
+        uses: openai/codex-action@v1
+        with:
+          prompt: |
+            Compare code changes with the README and identify documentation that needs updating. Respond in JSON: {"in_sync": true/false, "missing_updates": ["list"]}. Focus ONLY on docs/code alignment.
+            
+            Code diff:
+            ${{ steps.context.outputs.diff }}
+            
+            README:
+            ${{ steps.context.outputs.readme }}
+          output-file: /tmp/docs-check.json
       - name: Report docs status
         uses: actions/github-script@v7
         with:
@@ -54,7 +54,7 @@ jobs:
             try {
               const check = JSON.parse(raw);
               if (!check.in_sync && check.missing_updates?.length > 0) {
-                let body = '## 🤖 Docs Sync (OpenAI Codex)\n\n⚠️ **Documentation may be out of sync.**\n\n### Missing updates:\n';
+                let body = '## 🤖 Docs Sync (Codex)\n\n⚠️ **Documentation may be out of sync.**\n\n### Missing updates:\n';
                 for (const item of check.missing_updates) body += '- ' + item + '\n';
                 await github.rest.issues.createComment({owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body});
               }

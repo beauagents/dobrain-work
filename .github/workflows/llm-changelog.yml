@@ -18,17 +18,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install Codex CLI
-        run: npm install -g @openai/codex
-      - name: Generate changelog
-        env:
-          OPENAI_OAUTH_TOKEN: ${{ secrets.OPENAI_OAUTH_TOKEN }}
+      - name: Get recent commits
+        id: commits
         run: |
           COMMITS=$(git log --oneline -10 --no-merges)
-          echo "Generate a concise changelog entry from these commits. Group by type (features, fixes, maintenance). Use markdown. Focus ONLY on changelog.\n\nCommits:\n$COMMITS" | codex exec --sandbox read-only --dangerously-bypass-approvals-and-sandbox -o /tmp/changelog.md -
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Generate changelog
+        uses: openai/codex-action@v1
+        with:
+          prompt: |
+            Generate a concise changelog entry from these commits. Group by type (features, fixes, maintenance). Use markdown. Focus ONLY on changelog.
+            
+            Recent commits:
+            ${{ steps.commits.outputs.commits }}
+          output-file: /tmp/changelog.md
       - name: Commit changelog
         run: |
           ENTRY=$(cat /tmp/changelog.md)
