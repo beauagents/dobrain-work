@@ -21,7 +21,7 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
   - CLOUDFLARE_API_TOKEN
   - CLOUDFLARE_ACCOUNT_ID
   - OPENCODE_API_KEY
-  - OPENCODE_MODEL
+  - OPENCODE_MODEL (for example: deepseek-v4-flash)
   - OPENCODE_BASE_URL
 - Push to the main branch to trigger deployment.
 

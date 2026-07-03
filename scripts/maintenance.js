@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const apiKey = process.env.OPENCODE_API_KEY;
-const model = process.env.OPENCODE_MODEL || 'gpt-4.1-mini';
+const model = process.env.OPENCODE_MODEL || 'deepseek-v4-flash';
 const baseUrl = process.env.OPENCODE_BASE_URL || 'https://api.opencode.ai';
 
 console.log('Maintenance automation started');
