@@ -7,6 +7,7 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - Wrangler configuration for local development and deployment
 - GitHub issue and pull request templates
 - A deployment workflow for Cloudflare Workers via GitHub Actions
+- CI and maintenance automations with Opencode model integration
 
 ## Local development
 1. Install dependencies:
