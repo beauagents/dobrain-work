@@ -7,7 +7,7 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - Wrangler configuration for local development and deployment
 - GitHub issue and pull request templates
 - A deployment workflow for Cloudflare Workers via GitHub Actions
-- CI and maintenance automations with Opencode model integration
+- CI and maintenance automations with OpenAI Codex integration
 
 ## Local development
 1. Install dependencies:
@@ -21,11 +21,15 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - Configure the following GitHub repository secrets:
   - CLOUDFLARE_API_TOKEN
   - CLOUDFLARE_ACCOUNT_ID
-  - OPENCODE_API_KEY
-- Configure the following GitHub repository variables:
-  - OPENCODE_MODEL (for example: deepseek-v4-flash)
-  - OPENCODE_BASE_URL (for example: https://api.opencode.ai)
 - Push to the main branch to trigger deployment.
+
+## LLM bots (OpenAI Codex — ChatGPT subscription)
+All LLM-powered bots use OpenAI Codex with your ChatGPT business subscription — no API keys or pay-per-use costs.
+- **Code Review** — reviews PR diffs for bugs, security issues, and code quality
+- **Issue Triage** — classifies and prioritizes new issues automatically
+- **Changelog Writer** — generates changelog entries from commits on push
+- **Health Report** — weekly repo health metrics and improvement suggestions
+- **Docs Sync** — checks if README stays in sync with code changes in PRs
 
 ## CI/CD automation
 - CI workflow runs on pushes and pull requests to validate the worker and maintenance script.
@@ -41,7 +45,7 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - **Release drafter** — drafts release notes automatically from merged PRs
 - **Welcome bot** — greets first-time contributors on their first issue or PR
 
-## LLM-powered bots (deepseek-v4-flash via Opencode)
+## LLM-powered bots (OpenAI Codex — ChatGPT subscription)
 - **Code Review** — reviews PR diffs for bugs, security issues, and code quality
 - **Issue Triage** — classifies and prioritizes new issues automatically
 - **Changelog Writer** — generates changelog entries from commits on push

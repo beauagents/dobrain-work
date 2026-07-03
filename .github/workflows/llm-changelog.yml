@@ -1,4 +1,4 @@
-name: LLM Changelog Writer
+name: LLM Changelog (Codex)
 
 on:
   push:
@@ -18,52 +18,32 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 10
-      - name: Generate changelog entry
-        env:
-          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
-          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'deepseek-v4-flash' }}
-          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL || 'https://api.opencode.ai' }}
+      - name: Get recent commits
+        id: commits
         run: |
           COMMITS=$(git log --oneline -10 --no-merges)
-          node -e "
-          const https = require('https');
-          const url = new URL(process.env.OPENCODE_BASE_URL + '/v1/chat/completions');
-          const body = JSON.stringify({
-            model: process.env.OPENCODE_MODEL,
-            messages: [{
-              role: 'system',
-              content: 'You are a changelog writer. Generate a concise changelog entry from the commits. Group by type (features, fixes, maintenance). Use markdown. Focus ONLY on changelog — do not review code, triage issues, or write docs.'
-            }, {
-              role: 'user',
-              content: 'Recent commits:\n' + process.argv[1]
-            }],
-            max_tokens: 800
-          });
-          const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENCODE_API_KEY } }, res => {
-            let data = '';
-            res.on('data', d => data += d);
-            res.on('end', () => {
-              try {
-                const entry = JSON.parse(data).choices[0].message.content;
-                const date = new Date().toISOString().slice(0, 10);
-                const header = '\n\n## ' + date + '\n\n';
-                const fs = require('fs');
-                if (fs.existsSync('CHANGELOG.md')) {
-                  const existing = fs.readFileSync('CHANGELOG.md', 'utf8');
-                  fs.writeFileSync('CHANGELOG.md', '# Changelog\n' + header + entry + '\n' + existing.replace('# Changelog\n', ''));
-                } else {
-                  fs.writeFileSync('CHANGELOG.md', '# Changelog\n' + header + entry + '\n');
-                }
-              } catch (e) {
-                console.error('Changelog generation failed:', e.message);
-              }
-            });
-          });
-          req.write(body);
-          req.end();
-          " "$COMMITS"
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Generate changelog
+        uses: openai/codex-action@v1
+        with:
+          prompt: |
+            Generate a concise changelog entry from these commits. Group by type (features, fixes, maintenance). Use markdown. Focus ONLY on changelog.
+            
+            Recent commits:
+            ${{ steps.commits.outputs.commits }}
+          output-file: /tmp/changelog.md
       - name: Commit changelog
         run: |
+          ENTRY=$(cat /tmp/changelog.md)
+          DATE=$(date +%Y-%m-%d)
+          if [ -f CHANGELOG.md ]; then
+            EXISTING=$(cat CHANGELOG.md)
+            echo "# Changelog"$'\n\n'"## $DATE"$'\n\n'"$ENTRY"$'\n'"${EXISTING#*# Changelog}" > CHANGELOG.md
+          else
+            echo "# Changelog"$'\n\n'"## $DATE"$'\n\n'"$ENTRY" > CHANGELOG.md
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
