@@ -39,7 +39,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
       - name: Check docs alignment
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_OAUTH_TOKEN: ${{ secrets.OPENAI_OAUTH_TOKEN }}
           CODEX_MODEL: ${{ vars.CODEX_DOCS_MODEL || 'gpt-4o-mini' }}
           DIFF: ${{ steps.context.outputs.diff }}
           README: ${{ steps.context.outputs.readme }}

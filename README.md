@@ -21,6 +21,7 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - Configure the following GitHub repository secrets:
   - CLOUDFLARE_API_TOKEN
   - CLOUDFLARE_ACCOUNT_ID
+  - OPENAI_OAUTH_TOKEN (your ChatGPT subscription OAuth token)
 - Push to the main branch to trigger deployment.
 
 ## LLM bots (OpenAI Codex — ChatGPT subscription)
