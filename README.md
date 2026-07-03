@@ -21,8 +21,9 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
   - CLOUDFLARE_API_TOKEN
   - CLOUDFLARE_ACCOUNT_ID
   - OPENCODE_API_KEY
+- Configure the following GitHub repository variables:
   - OPENCODE_MODEL (for example: deepseek-v4-flash)
-  - OPENCODE_BASE_URL
+  - OPENCODE_BASE_URL (for example: https://api.opencode.ai)
 - Push to the main branch to trigger deployment.
 
 ## CI/CD automation
