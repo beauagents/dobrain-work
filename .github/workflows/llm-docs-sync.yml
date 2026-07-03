@@ -40,11 +40,10 @@ jobs:
       - name: Check docs alignment
         env:
           OPENAI_OAUTH_TOKEN: ${{ secrets.OPENAI_OAUTH_TOKEN }}
-          CODEX_MODEL: ${{ vars.CODEX_DOCS_MODEL || 'o4-mini' }}
           DIFF: ${{ steps.context.outputs.diff }}
           README: ${{ steps.context.outputs.readme }}
         run: |
-          echo "Compare code changes with the README and identify documentation that needs updating. Respond in JSON: {in_sync: true/false, missing_updates: [list]}. Focus ONLY on docs/code alignment.\n\nCode diff:\n$DIFF\n\nREADME:\n$README" | codex exec -m "$CODEX_MODEL" --sandbox read-only --dangerously-bypass-approvals-and-sandbox -o /tmp/docs-check.json -
+          echo "Compare code changes with the README and identify documentation that needs updating. Respond in JSON: {in_sync: true/false, missing_updates: [list]}. Focus ONLY on docs/code alignment.\n\nCode diff:\n$DIFF\n\nREADME:\n$README" | codex exec --sandbox read-only --dangerously-bypass-approvals-and-sandbox -o /tmp/docs-check.json -
       - name: Report docs status
         uses: actions/github-script@v7
         with:
