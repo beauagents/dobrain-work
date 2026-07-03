@@ -32,6 +32,15 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - Deployment workflow publishes the Worker to Cloudflare on pushes to main.
 - Maintenance workflow runs weekly and can be triggered manually for scheduled upkeep.
 
+## Bots and automations
+- **CodeQL** — weekly security scanning for JavaScript vulnerabilities
+- **Stale bot** — auto-closes inactive issues and PRs after 30 days
+- **Auto-labeler** — labels PRs based on changed files (worker, github, docs, dependencies)
+- **PR size labeler** — flags large PRs to encourage smaller changes
+- **Dependabot auto-merge** — auto-merges non-major dependabot updates
+- **Release drafter** — drafts release notes automatically from merged PRs
+- **Welcome bot** — greets first-time contributors on their first issue or PR
+
 ## Polyrepo note
 This repository is intentionally lightweight so it can act as one service in a larger multi-repo project. Each repository can keep its own deployment workflow while sharing the same project-level governance and issue tracking conventions.
 

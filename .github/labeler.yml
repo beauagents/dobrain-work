@@ -1,0 +1,21 @@
+worker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - src/**
+          - wrangler.toml
+
+github:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/**
+
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - package.json
+          - package-lock.json
