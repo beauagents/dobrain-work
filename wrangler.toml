@@ -1,0 +1,7 @@
+name = "dobrain-work"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+PROJECT_NAME = "dobrain-work"
+ENVIRONMENT = "development"
