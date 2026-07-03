@@ -1,0 +1,82 @@
+name: LLM Docs Sync
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+    paths:
+      - 'src/**'
+      - 'wrangler.toml'
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  docs-sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check docs alignment
+        id: check
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'deepseek-v4-flash' }}
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL || 'https://api.opencode.ai' }}
+        run: |
+          DIFF=$(git diff origin/main...HEAD -- src/ wrangler.toml package.json)
+          README=$(cat README.md)
+          node -e "
+          const https = require('https');
+          const url = new URL(process.env.OPENCODE_BASE_URL + '/v1/chat/completions');
+          const body = JSON.stringify({
+            model: process.env.OPENCODE_MODEL,
+            messages: [{
+              role: 'system',
+              content: 'You are a documentation sync checker. Compare the code changes with the README and identify any documentation that needs updating. Respond in JSON: {\"in_sync\": true/false, \"missing_updates\": [\"list of things to update\"]}. Focus ONLY on docs/code alignment — do not review code quality, triage issues, or generate changelogs.'
+            }, {
+              role: 'user',
+              content: 'Code diff:\n' + (process.argv[1] || 'No changes').slice(0, 8000) + '\n\n---\n\nCurrent README:\n' + (process.argv[2] || '').slice(0, 4000)
+            }],
+            max_tokens: 500
+          });
+          const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENCODE_API_KEY } }, res => {
+            let data = '';
+            res.on('data', d => data += d);
+            res.on('end', () => {
+              try {
+                const content = JSON.parse(data).choices[0].message.content;
+                const cleaned = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                require('fs').writeFileSync('/tmp/docs-check.json', cleaned);
+              } catch (e) {
+                require('fs').writeFileSync('/tmp/docs-check.json', JSON.stringify({in_sync: true, missing_updates: []}));
+              }
+            });
+          });
+          req.write(body);
+          req.end();
+          " "$DIFF" "$README"
+      - name: Report docs status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const check = JSON.parse(fs.readFileSync('/tmp/docs-check.json', 'utf8'));
+            if (!check.in_sync && check.missing_updates && check.missing_updates.length > 0) {
+              let body = '## 🤖 Docs Sync Check (deepseek-v4-flash)\n\n';
+              body += '⚠️ **Documentation may be out of sync with the code changes.**\n\n';
+              body += '### Missing updates:\n';
+              for (const item of check.missing_updates) {
+                body += '- ' + item + '\n';
+              }
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }

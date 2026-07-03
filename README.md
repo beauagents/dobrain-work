@@ -41,6 +41,13 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 - **Release drafter** — drafts release notes automatically from merged PRs
 - **Welcome bot** — greets first-time contributors on their first issue or PR
 
+## LLM-powered bots (deepseek-v4-flash via Opencode)
+- **Code Review** — reviews PR diffs for bugs, security issues, and code quality
+- **Issue Triage** — classifies and prioritizes new issues automatically
+- **Changelog Writer** — generates changelog entries from commits on push
+- **Health Report** — weekly repo health metrics and improvement suggestions
+- **Docs Sync** — checks if README stays in sync with code changes in PRs
+
 ## Polyrepo note
 This repository is intentionally lightweight so it can act as one service in a larger multi-repo project. Each repository can keep its own deployment workflow while sharing the same project-level governance and issue tracking conventions.
 

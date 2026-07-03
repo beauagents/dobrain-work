@@ -1,0 +1,70 @@
+name: LLM Changelog Writer
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - '.github/**'
+  workflow_dispatch:
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+      - name: Generate changelog entry
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'deepseek-v4-flash' }}
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL || 'https://api.opencode.ai' }}
+        run: |
+          COMMITS=$(git log --oneline -10 --no-merges)
+          node -e "
+          const https = require('https');
+          const url = new URL(process.env.OPENCODE_BASE_URL + '/v1/chat/completions');
+          const body = JSON.stringify({
+            model: process.env.OPENCODE_MODEL,
+            messages: [{
+              role: 'system',
+              content: 'You are a changelog writer. Generate a concise changelog entry from the commits. Group by type (features, fixes, maintenance). Use markdown. Focus ONLY on changelog — do not review code, triage issues, or write docs.'
+            }, {
+              role: 'user',
+              content: 'Recent commits:\n' + process.argv[1]
+            }],
+            max_tokens: 800
+          });
+          const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENCODE_API_KEY } }, res => {
+            let data = '';
+            res.on('data', d => data += d);
+            res.on('end', () => {
+              try {
+                const entry = JSON.parse(data).choices[0].message.content;
+                const date = new Date().toISOString().slice(0, 10);
+                const header = '\n\n## ' + date + '\n\n';
+                const fs = require('fs');
+                if (fs.existsSync('CHANGELOG.md')) {
+                  const existing = fs.readFileSync('CHANGELOG.md', 'utf8');
+                  fs.writeFileSync('CHANGELOG.md', '# Changelog\n' + header + entry + '\n' + existing.replace('# Changelog\n', ''));
+                } else {
+                  fs.writeFileSync('CHANGELOG.md', '# Changelog\n' + header + entry + '\n');
+                }
+              } catch (e) {
+                console.error('Changelog generation failed:', e.message);
+              }
+            });
+          });
+          req.write(body);
+          req.end();
+          " "$COMMITS"
+      - name: Commit changelog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet || git commit -m "docs: update changelog [skip ci]" && git push

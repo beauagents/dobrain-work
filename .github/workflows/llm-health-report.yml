@@ -1,0 +1,86 @@
+name: LLM Health Report
+
+on:
+  schedule:
+    - cron: '0 9 * * 5'
+  workflow_dispatch:
+
+jobs:
+  health-report:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gather metrics
+        id: metrics
+        run: |
+          TOTAL_COMMITS=$(git rev-list --count HEAD)
+          RECENT_COMMITS=$(git log --oneline --since="7 days ago" | wc -l)
+          FILES_COUNT=$(git ls-files | wc -l)
+          OPEN_ISSUES=$(gh issue list --repo ${{ github.repository }} --state open --json number --jq 'length' 2>/dev/null || echo "N/A")
+          OPEN_PRS=$(gh pr list --repo ${{ github.repository }} --state open --json number --jq 'length' 2>/dev/null || echo "N/A")
+          echo "total_commits=$TOTAL_COMMITS" >> $GITHUB_OUTPUT
+          echo "recent_commits=$RECENT_COMMITS" >> $GITHUB_OUTPUT
+          echo "files_count=$FILES_COUNT" >> $GITHUB_OUTPUT
+          echo "open_issues=$OPEN_ISSUES" >> $GITHUB_OUTPUT
+          echo "open_prs=$OPEN_PRS" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate health report
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'deepseek-v4-flash' }}
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL || 'https://api.opencode.ai' }}
+          METRICS: |
+            Total commits: ${{ steps.metrics.outputs.total_commits }}
+            Commits this week: ${{ steps.metrics.outputs.recent_commits }}
+            Files in repo: ${{ steps.metrics.outputs.files_count }}
+            Open issues: ${{ steps.metrics.outputs.open_issues }}
+            Open PRs: ${{ steps.metrics.outputs.open_prs }}
+        run: |
+          node -e "
+          const https = require('https');
+          const url = new URL(process.env.OPENCODE_BASE_URL + '/v1/chat/completions');
+          const body = JSON.stringify({
+            model: process.env.OPENCODE_MODEL,
+            messages: [{
+              role: 'system',
+              content: 'You are a repository health analyst. Given repo metrics, produce a concise health report with status indicators (✅ healthy, ⚠️ needs attention, ❌ critical) for each metric. Suggest actionable improvements. Focus ONLY on health metrics — do not review code, triage issues, or write docs.'
+            }, {
+              role: 'user',
+              content: 'Repository: dobrain-work (Cloudflare Worker)\n\nMetrics:\n' + process.argv[1]
+            }],
+            max_tokens: 1000
+          });
+          const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENCODE_API_KEY } }, res => {
+            let data = '';
+            res.on('data', d => data += d);
+            res.on('end', () => {
+              try {
+                const report = JSON.parse(data).choices[0].message.content;
+                require('fs').writeFileSync('/tmp/health.md', report);
+              } catch (e) {
+                require('fs').writeFileSync('/tmp/health.md', 'Health report generation failed: ' + e.message);
+              }
+            });
+          });
+          req.write(body);
+          req.end();
+          " "$METRICS"
+      - name: Create health issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('/tmp/health.md', 'utf8');
+            const date = new Date().toISOString().slice(0, 10);
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '📊 Weekly Health Report - ' + date,
+              body: '## 🤖 Repository Health Report (deepseek-v4-flash)\n\n' + report,
+              labels: ['health-report']
+            });

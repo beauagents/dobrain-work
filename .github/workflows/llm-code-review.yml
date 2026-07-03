@@ -1,0 +1,80 @@
+name: LLM Code Review
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+  workflow_dispatch:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g opencode-cli || true
+      - name: Get PR diff
+        id: diff
+        run: |
+          DIFF=$(git diff origin/main...HEAD)
+          echo "diff<<EOF" >> $GITHUB_OUTPUT
+          echo "$DIFF" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      - name: Review code changes
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'deepseek-v4-flash' }}
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL || 'https://api.opencode.ai' }}
+          PR_DIFF: ${{ steps.diff.outputs.diff }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          node -e "
+          const https = require('https');
+          const url = new URL(process.env.OPENCODE_BASE_URL + '/v1/chat/completions');
+          const body = JSON.stringify({
+            model: process.env.OPENCODE_MODEL,
+            messages: [{
+              role: 'system',
+              content: 'You are a code reviewer. Review the PR diff for bugs, security issues, and code quality. Be specific and concise. Focus ONLY on code review — do not triage issues, write docs, or generate changelogs.'
+            }, {
+              role: 'user',
+              content: 'PR Title: ' + process.env.PR_TITLE + '\n\nDiff:\n' + (process.env.PR_DIFF || 'No diff available').slice(0, 12000)
+            }],
+            max_tokens: 1500
+          });
+          const req = https.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.OPENCODE_API_KEY } }, res => {
+            let data = '';
+            res.on('data', d => data += d);
+            res.on('end', () => {
+              try {
+                const review = JSON.parse(data).choices[0].message.content;
+                require('fs').writeFileSync('/tmp/review.md', review);
+              } catch (e) {
+                require('fs').writeFileSync('/tmp/review.md', 'Review generation failed: ' + e.message + '\n\nRaw: ' + data);
+              }
+            });
+          });
+          req.write(body);
+          req.end();
+          "
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const review = fs.readFileSync('/tmp/review.md', 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '## 🤖 Code Review (deepseek-v4-flash)\n\n' + review
+            });
