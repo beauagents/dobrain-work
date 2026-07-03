@@ -33,3 +33,6 @@ A lightweight Cloudflare Workers starter for a polyrepo deployment model where m
 
 ## Polyrepo note
 This repository is intentionally lightweight so it can act as one service in a larger multi-repo project. Each repository can keep its own deployment workflow while sharing the same project-level governance and issue tracking conventions.
+
+## Assigned model task
+After this repository is pushed, the assigned model should validate the CI workflow, verify the deployment workflow, run the maintenance workflow, and report back with any follow-up changes needed for the polyrepo deployment setup.

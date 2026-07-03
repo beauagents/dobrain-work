@@ -5,7 +5,9 @@
   "description": "Lightweight Cloudflare Worker starter for a polyrepo deployment setup",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "check": "node --check src/index.js",
+    "maintenance": "node scripts/maintenance.js"
   },
   "devDependencies": {
     "wrangler": "^3.78.0"
