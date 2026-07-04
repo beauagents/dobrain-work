@@ -2,17 +2,21 @@
   "name": "dobrain-work",
   "version": "1.0.0",
   "private": true,
-  "description": "Lightweight Cloudflare Worker starter for a polyrepo deployment setup",
+  "description": "Lightweight Vercel-compatible gateway starter for a polyrepo deployment setup",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "check": "node --check src/index.js",
-    "maintenance": "node scripts/maintenance.js"
+    "maintenance": "node scripts/maintenance.js",
+    "vercel-build": "node --check src/index.js && mkdir -p public && cp -f src/index.js public/index.js"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1"
   },
   "devDependencies": {
     "wrangler": "^4.107.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
