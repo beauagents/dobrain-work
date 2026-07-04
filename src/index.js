@@ -28,6 +28,7 @@ const HTML = `<!doctype html>
     .pill { display:inline-flex; border:1px solid var(--line); border-radius:999px; padding:6px 10px; color:var(--muted); font-size:12px; margin-right:6px; }
     @media (max-width:800px){ .grid{grid-template-columns:1fr;} }
   </style>
+  <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 </head>
 <body>
 <main>

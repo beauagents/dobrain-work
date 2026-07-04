@@ -9,6 +9,9 @@
     "check": "node --check src/index.js",
     "maintenance": "node scripts/maintenance.js"
   },
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  },
   "devDependencies": {
     "wrangler": "^4.107.0"
   }
