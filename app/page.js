@@ -7,9 +7,9 @@ export default function Page() {
         Replace this page with any Vercel, Next.js, ChatGPT-style, or custom UI template. The backend API is already available under <code>/api</code>.
       </p>
       <ul style={{ lineHeight: 1.9 }}>
-        <li><code>GET /api/health</code></li>
-        <li><code>GET /api/runtime/capabilities</code></li>
-        <li><code>POST /api/jobs</code></li>
+        <li><code>GET /health</code></li>
+        <li><code>GET /api/providers</code></li>
+        <li><code>POST /v1/chat/completions</code></li>
       </ul>
     </main>
   );
