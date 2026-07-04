@@ -1,68 +1,137 @@
-# dobrain-work
+# DoBrain Work
 
-A lightweight Cloudflare Workers starter for a polyrepo deployment model where multiple repositories can be managed as separate services under one GitHub project umbrella.
+DoBrain Work is the product umbrella, not a single backend.
 
-## What this repo includes
-- A minimal Cloudflare Worker entry point
-- Wrangler configuration for local development and deployment
-- GitHub issue and pull request templates
-- A deployment workflow for Cloudflare Workers via GitHub Actions
-- CI and maintenance automations with OpenAI Codex integration
+This repository currently contains the first lightweight component: a setup-first gateway appliance. It should stay small enough that a user can install it, open the static setup screen, add a model or future PKCE OAuth connection, choose a default endpoint, and continue.
+
+The backend stack may change over time. Users should not need to track whether the runtime is Cloudflare, Vercel, local, or another provider. The stable experience is the setup flow.
+
+> Bring your models. We'll handle the rest.
+
+## Current component
+
+**Gateway appliance**
+
+- Static setup GUI at `/` and `/setup`
+- Health endpoint at `/health`
+- Provider metadata at `/api/providers`
+- OpenAI-compatible passthrough for `/v1/*`
+- `/responses` passthrough
+- Router API-key auth with `Authorization: Bearer`, `x-api-key`, or `x-router-api-key`
+- User-provided endpoint and provider key support for quick local setup
+- Environment-provided default provider support for hosted installs
+- Auto and Auto-Free route labels
+- Model/privacy footnotes returned in response headers
+
+## What this repo is allowed to be
+
+This repo can act as the early polyrepo root while the system is still forming.
+
+It may temporarily contain:
+
+- the first gateway appliance
+- product docs
+- project canon
+- deployment notes
+- agent instructions
+- parked roadmap items
+
+As the system hardens, components can move into their own repositories or folders without changing the public product name.
+
+## What this repo is not
+
+This repo should not pretend the gateway is the whole product.
+
+DoBrain Work is expected to grow into multiple components:
+
+- gateway appliance
+- consumer app
+- self-host installer
+- Mirror
+- Rooms
+- Wallet
+- Signals
+- Automations
+- optional Discord bridge
+- optional Bankr/x402 integration
+- deployment profiles for different runtimes
 
 ## Local development
+
 1. Install dependencies:
+
+   ```bash
    npm install
+   ```
+
 2. Start the worker locally:
+
+   ```bash
    npm run dev
-3. Verify the health endpoint:
+   ```
+
+3. Open the setup GUI:
+
+   ```text
+   http://127.0.0.1:8787/setup
+   ```
+
+4. Verify the health endpoint:
+
+   ```bash
    curl http://127.0.0.1:8787/health
+   ```
 
-## Deployment
-- Configure the following GitHub repository secrets:
-  - CLOUDFLARE_API_TOKEN
-  - CLOUDFLARE_ACCOUNT_ID
-  - OPENAI_OAUTH_TOKEN (your ChatGPT subscription OAuth token)
-  - OPENAI_REFRESH_TOKEN (for automatic token renewal)
-- Push to the main branch to trigger deployment.
+## Basic hosted configuration
 
-## Token management
-The OAuth token refreshes automatically every 6 hours via the `Refresh OAuth Token` workflow. To set this up:
-1. Run `codex login` locally with your ChatGPT account
-2. Copy the refresh token from `~/.codex/auth.json`
-3. Add it as `OPENAI_REFRESH_TOKEN` in GitHub repository secrets
-4. The workflow will automatically update `OPENAI_OAUTH_TOKEN` when it expires
+Set these environment values when you want the gateway to have a default provider without asking the user to paste a provider key in the setup GUI.
 
-## LLM bots (OpenAI Codex — ChatGPT subscription)
-All LLM-powered bots use the OpenAI Codex CLI with your ChatGPT business subscription — no API keys or pay-per-use costs.
-- **Code Review** — reviews PR diffs for bugs, security issues, and code quality (o4-mini)
-- **Issue Triage** — classifies and prioritizes new issues automatically (o4-mini)
-- **Changelog Writer** — generates changelog entries from commits on push (o4-mini)
-- **Health Report** — weekly repo health metrics and improvement suggestions (o4-mini)
-- **Docs Sync** — checks if README stays in sync with code changes in PRs (o4-mini)
+```text
+ROUTER_API_KEY=your-router-key
+DEFAULT_PROVIDER_BASE_URL=https://example-provider.com/api/v1
+DEFAULT_PROVIDER_API_KEY=provider-key
+PROJECT_NAME=dobrain-work
+ENVIRONMENT=production
+```
 
-## CI/CD automation
-- CI workflow runs on pushes and pull requests to validate the worker and maintenance script.
-- Deployment workflow publishes the Worker to Cloudflare on pushes to main.
-- Maintenance workflow runs weekly and can be triggered manually for scheduled upkeep.
+The setup GUI can still accept a temporary endpoint and provider key for quick testing. Production installs should prefer server-side secrets.
 
-## Bots and automations
-- **CodeQL** — weekly security scanning for JavaScript vulnerabilities
-- **Stale bot** — auto-closes inactive issues and PRs after 30 days
-- **Auto-labeler** — labels PRs based on changed files (worker, github, docs, dependencies)
-- **PR size labeler** — flags large PRs to encourage smaller changes
-- **Dependabot auto-merge** — auto-merges non-major dependabot updates
-- **Release drafter** — drafts release notes automatically from merged PRs
-- **Welcome bot** — greets first-time contributors on their first issue or PR
+## User-facing setup principle
 
-## LLM-powered bots (OpenAI Codex — ChatGPT subscription)
-- **Code Review** — reviews PR diffs for bugs, security issues, and code quality
-- **Issue Triage** — classifies and prioritizes new issues automatically
-- **Changelog Writer** — generates changelog entries from commits on push
-- **Health Report** — weekly repo health metrics and improvement suggestions
-- **Docs Sync** — checks if README stays in sync with code changes in PRs
+The user should see:
 
-## Polyrepo note
-This repository is intentionally lightweight so it can act as one service in a larger multi-repo project. Each repository can keep its own deployment workflow while sharing the same project-level governance and issue tracking conventions.
+1. Add model credentials or connect through PKCE OAuth later.
+2. Choose the default endpoint.
+3. Send a test message.
+4. Done.
 
-## Assigned model task
-After this repository is pushed, the assigned model should validate the CI workflow, verify the deployment workflow, run the maintenance workflow, and report back with any follow-up changes needed for the polyrepo deployment setup.
+The user should not need to understand the backend stack.
+
+## Privacy footnotes
+
+Every generated response should be able to tell the user what route was used in plain language.
+
+- **Auto**: stronger configured route, provider processing depends on configured provider and workspace settings.
+- **Auto-Free**: free or low-cost route, provider may log prompts and outputs according to provider policy.
+
+The implementation returns this as `x-dobrain-footnote` for now. The consumer app can render it under each message later.
+
+## Polyrepo direction
+
+The active direction is:
+
+```text
+DoBrain Work = product umbrella
+this repo = early root + first gateway appliance
+future repos = app, workers, docs, integrations, founder site, community tools
+```
+
+Do not hard-code the public identity around one runtime provider.
+
+Do not expose backend churn to users.
+
+Do not make self-hosters learn the full architecture before setup.
+
+## Parked maintenance
+
+Workflow automation cleanup is parked until the MVP path is stable. PR #3 contains useful cleanup but also raised real workflow-auth concerns. It should be revisited after the gateway appliance is verified.
