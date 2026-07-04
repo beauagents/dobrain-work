@@ -25,7 +25,34 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx wrangler deploy
+      - name: Deploy Worker
+        id: deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          npx wrangler deploy 2>&1 | tee deploy.log
+          WORKER_URL=$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' deploy.log | head -n 1 || true)
+          if [ -z "$WORKER_URL" ]; then
+            echo "Could not detect workers.dev URL from wrangler output."
+            cat deploy.log
+            exit 1
+          fi
+          echo "worker_url=$WORKER_URL" >> "$GITHUB_OUTPUT"
+          echo "Deployed to $WORKER_URL"
+      - name: Smoke test gateway
+        env:
+          WORKER_URL: ${{ steps.deploy.outputs.worker_url }}
+        run: |
+          set -euo pipefail
+          curl -fsS "$WORKER_URL/health" | tee health.json
+          grep -q '"ok": true' health.json
+          curl -fsSI "$WORKER_URL/setup" | grep -i 'content-type: text/html'
+      - name: Bounded stress test
+        env:
+          WORKER_URL: ${{ steps.deploy.outputs.worker_url }}
+        run: |
+          set -euo pipefail
+          seq 1 50 | xargs -n 1 -P 10 -I{} sh -c 'curl -fsS "$WORKER_URL/health" >/dev/null'
+          echo "Completed 50 health checks with concurrency 10."
